@@ -1,3 +1,4 @@
+// NOTA: Controlador del juego: coordina menús, historia, turnos y finales usando los modelos.
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -5,20 +6,28 @@ import java.util.Scanner;
 
 public class RPGPirata {
 
+    // NOTA: Lee lo que escribes en la terminal. final impide reemplazar esta referencia después del constructor.
     private final Scanner teclado;
+    // NOTA: Genera variaciones de daño. nextInt(6) produce 0, 1, 2, 3, 4 o 5.
     private final Random azar;
 
+    // NOTA: Lista dinámica con el orden de los combates. El primer índice es 0.
     private final ArrayList<Enemigo> enemigos = new ArrayList<>();
 
+    // NOTA: Referencia al jugador de la partida actual; se crea en nuevaPartida().
     private Personaje jugador;
+    // NOTA: Cuenta victorias y también indica el índice del próximo enemigo.
     private int progreso;
+    // NOTA: Bandera: true mantiene el campamento abierto; false termina la partida.
     private boolean partidaActiva;
 
+    // NOTA: Constructor: recibe Scanner y Random y guarda sus referencias. Permite separar la lectura y el azar de las reglas.
     public RPGPirata(Scanner teclado, Random azar) {
         this.teclado = teclado;
         this.azar = azar;
     }
 
+    // NOTA: Prepara los recursos y abre el menú principal. try con recursos cierra el Scanner al salir. El catch maneja el cierre de la entrada.
     public static void iniciar() {
         try (Scanner teclado = new Scanner(System.in)) {
             RPGPirata juego = new RPGPirata(teclado, new Random());
@@ -29,6 +38,7 @@ public class RPGPirata {
         }
     }
 
+    // NOTA: Bucle exterior: iniciar otra partida o salir. return sale del método; terminar una partida permite volver a este menú.
     public void mostrarMenuPrincipal() {
         while (true) {
             System.out.println("\n================================");
@@ -49,6 +59,7 @@ public class RPGPirata {
         }
     }
 
+    // NOTA: Restablece al jugador, progreso y enemigos. AQUÍ puedes editar nombres y estadísticas enemigas, además de la introducción.
     private void nuevaPartida() {
         System.out.print("\nNombre de tu pirata: ");
         String nombre = teclado.nextLine().trim();
@@ -98,6 +109,7 @@ public class RPGPirata {
         );
     }
 
+    // NOTA: Bucle del campamento. switch elige la acción; break sale del switch, no de toda la partida. El catch informa de acciones inválidas y permite continuar.
     private void jugar() {
         while (partidaActiva) {
             System.out.println("\n========== CAMPAMENTO ==========");
@@ -158,6 +170,7 @@ public class RPGPirata {
         }
     }
 
+    // NOTA: Selecciona enemigo por progreso, crea una copia para combatir y recompensa solo si combatir() devuelve true. Huir reinicia la vida enemiga para el siguiente intento.
     private void explorar() {
         if (progreso == enemigos.size()) {
             System.out.println(
@@ -174,6 +187,7 @@ public class RPGPirata {
             System.out.println("\nEntras en la fortaleza del capitán.");
         }
 
+        // NOTA: Obtiene el enemigo de la posición actual. El límite de la lista se comprobó antes.
         Enemigo modelo = enemigos.get(progreso);
 
         // Cada intento tiene un enemigo con la vida completa.
@@ -185,6 +199,7 @@ public class RPGPirata {
                 modelo.getDefensa()
         );
 
+        // NOTA: Solo entra si el combate devolvió true, es decir, victoria.
         if (combatir(enemigo)) {
             progreso++;
 
@@ -214,6 +229,7 @@ public class RPGPirata {
         }
     }
 
+    // NOTA: Añade Madera tras la victoria 2, Vela tras la 4 y Timón tras la 6. null significa que este combate no entrega pieza.
     private void entregarPieza() {
         String pieza = null;
 
@@ -231,7 +247,9 @@ public class RPGPirata {
         }
     }
 
+    // NOTA: Combate por turnos. Devuelve true al ganar y false al huir o perder. Controla ataque, habilidad, defensa, recarga, vida y dibujo de derrota.
     private boolean combatir(Enemigo enemigo) {
+        // NOTA: Habilidad lista al comenzar cada combate. Es variable local, no atributo permanente.
         int enfriamiento = 0;
 
         System.out.println(
@@ -239,6 +257,7 @@ public class RPGPirata {
                         + " — Nivel " + enemigo.getNivel()
         );
 
+        // NOTA: && exige que ambos sigan vivos para comenzar otro turno.
         while (jugador.getVida() > 0 && enemigo.getVida() > 0) {
             System.out.println("\n---------- COMBATE ----------");
 
@@ -277,24 +296,30 @@ public class RPGPirata {
 
             } catch (AccionInvalidaException e) {
                 System.out.println(e.getMessage());
+                // NOTA: Vuelve al inicio del bucle: la acción inválida no permite atacar al enemigo ni consume recarga.
                 continue;
             }
 
+            // NOTA: Guarda true si el jugador eligió defenderse en este turno.
             boolean defendiendo = opcion == 3;
 
             if (defendiendo) {
                 System.out.println("Preparas tu defensa.");
 
             } else {
+                // NOTA: Ataque base más azar entre 0 y 5; todavía falta restar la defensa enemiga.
                 int dano = jugador.getAtaque() + azar.nextInt(6);
 
                 if (opcion == 2) {
+                    // NOTA: Bonificación del Corte del corsario; también crece con el nivel.
                     dano += 10 + jugador.getNivel() * 4;
+                    // NOTA: PERSONALIZAR: acciones válidas necesarias para recuperar la habilidad después de usarla.
                     enfriamiento = 3;
 
                     System.out.println("¡Usas Corte del corsario!");
                 }
 
+                // NOTA: La defensa reduce daño, pero un ataque siempre causa al menos 1.
                 dano = Math.max(1, dano - enemigo.getDefensa());
 
                 enemigo.recibirDano(dano);
@@ -319,6 +344,7 @@ public class RPGPirata {
             );
 
             if (defendiendo) {
+                // NOTA: Defender reduce el daño a la mitad con división entera, mínimo 1.
                 danoRecibido = Math.max(1, danoRecibido / 2);
             }
 
@@ -330,6 +356,7 @@ public class RPGPirata {
 
             // La habilidad se recarga realizando otras tres acciones.
             if (enfriamiento > 0 && opcion != 2) {
+                // NOTA: Resta un turno pendiente de recarga. Solo ocurre bajo la condición que lo rodea.
                 enfriamiento--;
             }
         }
@@ -352,6 +379,7 @@ terminar("DERROTA: te quedaste sin vida");
         return false;
     }
 
+    // NOTA: Menú de compra: muestra precios y solicita a Personaje que realice el cobro y la mejora. Si cambias precios, ajusta también Personaje.mejorarEquipo().
     private void mejorarEquipo() throws AccionInvalidaException {
         System.out.println("\n========== MEJORAS ==========");
 
@@ -377,11 +405,13 @@ terminar("DERROTA: te quedaste sin vida");
             return;
         }
 
+        // NOTA: La comparación produce un boolean: opción 1 significa mejorar espada.
         jugador.mejorarEquipo(opcion == 1);
 
         System.out.println("¡Equipo mejorado!");
     }
 
+    // NOTA: Consulta getters para imprimir el estado. Los textos no modifican los atributos. Si cambias reglas, revisa los valores mostrados.
     private void mostrarPersonaje() {
         System.out.println("\n========== PERSONAJE ==========");
 
@@ -418,6 +448,7 @@ terminar("DERROTA: te quedaste sin vida");
         );
     }
 
+    // NOTA: Comprueba si está vacío y recorre cada Item para imprimir su nombre.
     private void mostrarInventario() {
         System.out.println("\n========== INVENTARIO ==========");
 
@@ -431,6 +462,7 @@ terminar("DERROTA: te quedaste sin vida");
         }
     }
 
+    // NOTA: Solicita un nombre y usa Personaje.buscarItem(). Interpreta null como objeto no encontrado.
     private void buscarObjeto() {
         System.out.print("Nombre del objeto que quieres buscar: ");
 
@@ -448,7 +480,9 @@ terminar("DERROTA: te quedaste sin vida");
         }
     }
 
+    // NOTA: Primero valida las piezas. Si falla, la excepción impide imprimir el dibujo de victoria. Si pasa, muestra tu dibujo y termina la partida.
     private void repararBarco() throws AccionInvalidaException {
+    // NOTA: Si lanza una excepción, se salta el resto de repararBarco() y la captura jugar().
     jugador.validarReparacion();
 
     System.out.println("\nReparas el casco con la madera.");
@@ -476,9 +510,12 @@ terminar("DERROTA: te quedaste sin vida");
 
     terminar("VICTORIA: escapaste de la isla");
 } 
+    // NOTA: Final común para victoria, derrota y abandono. Desactiva el campamento e imprime puntaje. No cierra el menú principal.
     private void terminar(String resultado) {
+        // NOTA: Hace que el while de jugar() deje de repetirse al volver a comprobar la condición.
         partidaActiva = false;
 
+        // NOTA: Puntaje: 100 por enemigo vencido + 50 por pieza. Máximo actual: 750.
         int puntaje = progreso * 100
                 + jugador.getInventario().size() * 50;
 
@@ -489,6 +526,7 @@ terminar("DERROTA: te quedaste sin vida");
         System.out.println("================================");
     }
 
+    // NOTA: Repite la lectura hasta recibir un entero dentro del rango inclusivo. Captura texto no numérico y opciones inválidas sin cerrar el juego.
     private int leerOpcion(int minimo, int maximo) {
         while (true) {
             System.out.print("> ");
